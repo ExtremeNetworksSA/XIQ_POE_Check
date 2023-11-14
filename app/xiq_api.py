@@ -132,34 +132,29 @@ class XIQ:
             raise ValueError("Unable to parse the data from json, script cannot proceed")
         return data
 
-    def __post_api_call_no_payload(self, url):
-        try:
-            response = requests.post(url, headers= self.headers)
-        except HTTPError as http_err:
-            logger.error(f'HTTP error occurred: {http_err} - on API {url}')
-            raise ValueError(f'HTTP error occurred: {http_err}') 
-        if response is None:
-            log_msg = "ERROR: No response received from XIQ!"
-            logger.error(log_msg)
-            raise ValueError(log_msg)
-        if response.status_code == 201:
-            return "Success"
-        elif response.status_code != 200:
-            log_msg = f"Error - HTTP Status Code: {str(response.status_code)}"
-            logger.error(f"{log_msg}")
-            try:
-                data = response.json()
-            except json.JSONDecodeError:
-                logger.warning(f"\t\t{response.text()}")
-            else:
-                if 'error_message' in data:
-                    logger.warning(f"\t\t{data['error_message']}")
-                    raise Exception(data['error_message'])
-            raise ValueError(log_msg)
-        else:
-            return "Success"
     
-
+    ## LRO Call
+    def __post_lro_call(self, url, payload = {}, msg='', count = 1):
+        try:
+            response = requests.post(url, headers=self.headers, data=payload, timeout=60)
+        except HTTPError as http_err:
+            raise HTTPError(f'HTTP error occurred: {http_err} - on API {url}')
+        except ReadTimeout as timout_err:
+            raise HTTPError(f'HTTP error occurred: {timout_err} - on API {url}')
+        except Exception as err:
+            raise TypeError(f'Other error occurred: {err}: on API {url}')
+        else:
+            if response is None:
+                error_msg = f"Error retrieving API {msg} from XIQ - no response!"
+                raise TypeError(error_msg)
+            elif response.status_code != 202:
+                error_msg = f"Error retrieving API {msg} from XIQ - HTTP Status Code: {str(response.status_code)}"
+                print(response.text)
+                raise TypeError(error_msg) 
+            data = response.headers
+            # return the URL needed to check the status and collect data for the LRO
+            return data['Location']
+        
     def __getAccessToken(self, user_name, password):
         info = "get XIQ token"
         success = 0
@@ -321,7 +316,7 @@ class XIQ:
 
         devices = []
         while page <= pageCount:
-            url = self.URL + "/devices?views=FULL&page=" + str(page) + "&limit=" + str(pageSize)
+            url = self.URL + "/devices?views=FULL&page=" + str(page) + "&limit=" + str(pageSize) + "&connected=true"
             if location_id:
                 url = url  + "&locationId=" +str(location_id)
             rawList = self.__setup_get_api_call(info,url)
@@ -341,3 +336,91 @@ class XIQ:
 
 
     ## CLI command
+     ## CLI
+    def sendCLI(self, device_id_list, cmds):
+        error_msg = "to send CLI command"
+        payload = json.dumps({
+            "devices": {
+                "ids": device_id_list
+            },
+            "clis": cmds
+        })
+        url = "{}/devices/:cli?async=true".format(self.URL)
+        for count in range(1, self.totalretries):
+            try:
+                lro_url = self.__post_lro_call(url, payload, error_msg, count=count)
+            except TypeError as e:
+                logger.error(f"API failed with {e}")
+                count+=1
+                success = False
+            except HTTPError as e:
+                logger.error(f"API {e}")
+                count+=1
+                success = False
+            except:
+                logger.error(f"API failed {error_msg} with an unknown API error: {url}")		
+                count+=1
+                success = False
+            else:
+                success = True
+                break
+        if success == False:
+            logger.error(f"API call {error_msg} failed. Script is exiting...")
+            raise SystemExit 
+
+        if lro_url:
+            lro_running = True
+            count = 1
+            print(f"Send CLI commands to {len(device_id_list)} devices using The long-running operation. Checking status in 60 secs.")
+            t = 60
+            while t:
+                mins, secs = divmod(t, 60)
+                timer = '{:02d}:{:02d}'.format(mins, secs)
+                print(timer, end='\r')
+                time.sleep(1)
+                t -= 1
+            while lro_running and count < 11:
+                print(f"Attempting to collect CLI responses - attempt {count} of 10")
+                try:
+                    rawData = self.__get_api_call(url=lro_url)
+                except TypeError as e:
+                    logger.error(f"API failed with {e}")
+                    count+=1
+                    success = False
+                except HTTPError as e:
+                    logger.error(f"API HTTP Error {e}")
+                    count+=1
+                    success = False
+                except:
+                    logger.error(f"API failed {error_msg} with an unknown API error:\n 	{url}")		
+                    count+=1
+                    success = False
+                else:
+                    #print("Successful Connection")
+                    success = True
+                if success:
+                    if rawData['done'] == True:
+                        data = rawData['response']
+                        lro_running = False
+                        break
+                    else:
+                        if rawData['metadata']['status'] != "RUNNING":
+                            logger.error(f"It appears that the long-running operation failed. The status is f{rawData['metadata']['status']}")
+                            logger.warning(rawData)
+                            lro_running = False
+                        else:
+                            print(f"The long-running operation is not complete. Checking again in 120 secs.")
+                            t = 120
+                            while t:
+                                mins, secs = divmod(t, 60)
+                                timer = '{:02d}:{:02d}'.format(mins, secs)
+                                print(timer, end='\r')
+                                time.sleep(1)
+                                t -= 1
+
+                count += 1
+        if data:
+            return(data)
+        else:
+            logger.warning("collecting CLI failed")
+            raise SystemExit 
