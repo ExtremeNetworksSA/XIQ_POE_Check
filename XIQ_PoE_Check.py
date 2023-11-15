@@ -4,15 +4,13 @@ import argparse
 import sys
 import os
 import re
-import json
 import inspect
 import getpass
 import pandas as pd
-from pprint import pprint as pp
 from app.logger import logger
 from app.xiq_api import XIQ
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-logger = logging.getLogger('StaggeredReboot.Main')
+logger = logging.getLogger('PoE_Check.Main')
 
 XIQ_API_token = ''
 
@@ -94,21 +92,35 @@ if args.external:
                     newViqID = (accounts_df.loc[int(selection),'id'])
                     newViqName = (accounts_df.loc[int(selection),'name'])
                     x.switchAccount(newViqID, newViqName)
+                    logger.info(f"Logged into {newViqName}")
 
 # collect building name from user and get ids for any floors of the building
-building = input("Please enter the name of the building: ")
-print("Collecting Location information")
-floor_list = x.getFloors(building)
-if 'errors' in floor_list:
-    errors = ", ".join(floor_list['errors'])
-    print(errors)
-    print("script is exiting....")
-    raise SystemExit
+building_search = True
+while building_search:
+    building = input("Please enter the name of the building: ")
+    print("Collecting Location information")
+    floor_list = x.getFloors(building)
+    if 'errors' in floor_list:
+        errors = ", ".join(floor_list['errors'])
+        print(errors)
+        logger.error(errors)
+        yesNoLoop = "would you like to try again?"
+        if yesNoLoop == 'n':
+            print("script is exiting....")
+            raise SystemExit
+        print('\n')
+    else:
+        building_search = False
+
+
+#Check floor list
 if not floor_list:
-    print(f"There was no floors associated with the building {building}")
+    msg = f"There was no floors associated with the building {building}"
+    print(msg)
+    logger.warning(msg)
     print("script is exiting....")
     raise SystemExit
-#TODO - check building name and loop? 
+    
 
 device_data = []
 for floor in floor_list:
@@ -116,14 +128,19 @@ for floor in floor_list:
     ## Collect Devices
     temp_data = x.collectDevices(pageSize,location_id=floor['id'])
     device_data = device_data + temp_data
-    #pp(device_data)
+
+print("\n\n")
 
 if not device_data:
-    print("There were no devices found!")
+    msg = "There were no devices found!"
+    logger.warning(msg)
+    print(msg)
     print("script is exiting....")
     raise SystemExit
 
-print(f"Collected {len(device_data)} APs from location {building}")
+msg = f"Collected {len(device_data)} APs from location {building}"
+print(msg)
+logger.info(msg)
 
 # convert device_data dict to dataframe
 device_df = pd.DataFrame(device_data)
@@ -136,6 +153,7 @@ if id_list:
     csv_df = pd.DataFrame(columns = ['Device', 'Power Status'])
     rawData = x.sendCLI(id_list, commands)
     for device_id in rawData['device_cli_outputs']:
+        print(rawData['device_cli_outputs'][device_id])
         output = rawData['device_cli_outputs'][device_id][0]['output']
         output_regex = re.compile('System\sPower\sStatus:\s+(\w+)')
         power_status = output_regex.findall(output)[0]
@@ -144,4 +162,8 @@ if id_list:
         temp_df = pd.DataFrame([{'Device': devicename, 'Power Status': power_status}])
         csv_df = pd.concat([csv_df, temp_df], ignore_index=True)
 
+print("\n")
 print(csv_df)
+filename = f"{building}_PoE_Check.csv"
+print(f"Writing CSV File {filename}")
+csv_df.to_csv(f"{PATH}/{filename}", index=False)

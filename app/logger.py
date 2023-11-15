@@ -11,7 +11,7 @@ PATH = os.path.dirname(os.path.abspath(__file__))
 
 log_formatter = logging.Formatter('%(asctime)s: %(name)s - %(levelname)s - %(message)s')
 
-logFile = '{}/XIQ_PoE_log.log'.format(parent_dir)
+logFile = '{}/PoE_log.log'.format(parent_dir)
 
 my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=5*1024, 
                                  backupCount=5, encoding=None, delay=0)

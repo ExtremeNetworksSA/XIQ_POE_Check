@@ -14,7 +14,7 @@ sys.path.insert(0, parent_dir)
 from requests.exceptions import HTTPError, ReadTimeout
 from app.logger import logger
 
-logger = logging.getLogger('StaggeredReboot.xiq_api')
+logger = logging.getLogger('PoE_Check.xiq_api')
 
 PATH = current_dir
 
@@ -289,11 +289,17 @@ class XIQ:
             error_msg = (f"No building was found with the name {building_name}")
             errors.append(error_msg)
         elif rawList['total_count'] > 1:
-            error_msg = (f"Multiple buildings found with the name {building_name}")
+            error_msg = (f"Multiple buildings found with the name {building_name}\n\t")
+            error_msg += ", ".join([x['name'] for x in rawList['data']])
             errors.append(error_msg)
         else:
             if len(rawList['data']) != 1:
-                error_msg = (f"Multiple buildings found with the name {building_name}")
+                error_msg = (f"Multiple buildings found with the name {building_name}\n\t")
+                error_msg += ", ".join([x['name'] for x in rawList['data']])
+                errors.append(error_msg)
+            if building_name != rawList['data'][0]['name']:
+                error_msg = (f"Building {building_name} does not match what was found.\n\t")
+                error_msg += (f"Building {rawList['data'][0]['name']} was found, please re-enter if you would like to run against this building.")
                 errors.append(error_msg)
             else:
                 floors = self._gatherFloorList(info, rawList['data'][0]['id'])
