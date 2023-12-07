@@ -9,7 +9,7 @@ When running the script, you will be prompted to enter a building name. The scri
 
 ## Needed files
 The XIQ_PoE_Check.py script uses several other files. If these files are missing the script will not function.
-In the same folder as the XIQ_PoE_Check.py script there should be an /app/ folder. Inside this folder should be a logger.py file and a xiq_api.py file. After running the script a new file 'staggered_reboot.log' will be created.
+In the same folder as the XIQ_PoE_Check.py script there should be an /app/ folder. Inside this folder should be a logger.py file and a xiq_api.py file. After running the script a new file 'PoE_log.log' will be created.
 
 The log file that is created when running will show any errors that the script might run into. It is a great place to look when troubleshooting any issues.
 
@@ -17,7 +17,7 @@ The log file that is created when running will show any errors that the script m
 open the terminal to the location of the script and run this command.
 
 ```
-python XIQ_Staggered_Reboot.py
+python XIQ_PoE_Check.py
 ```
 ### Logging in
 The script will prompt the user for XIQ credentials.
@@ -32,7 +32,7 @@ This flag will allow you to create the locations and assign the devices to locat
 
 You can add the flag when running the script.
 ```
-python XIQ_Staggered_Reboot.py --external
+python XIQ_PoE_Check.py --external
 ```
 ## requirements
 There are additional modules that need to be installed in order for this script to function. They are listed in the requirements.txt file and can be installed with the command 'pip install -r requirements.txt' if using pip.
