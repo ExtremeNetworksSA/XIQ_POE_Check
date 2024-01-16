@@ -13,7 +13,7 @@ log_formatter = logging.Formatter('%(asctime)s: %(name)s - %(levelname)s - %(mes
 
 logFile = '{}/PoE_log.log'.format(parent_dir)
 
-my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=5*1024*1024*1024, 
+my_handler = RotatingFileHandler(logFile, mode='a', maxBytes=50*1024*1024, 
                                  backupCount=5, encoding=None, delay=0)
 
 my_handler.setFormatter(log_formatter)
