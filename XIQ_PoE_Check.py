@@ -155,7 +155,7 @@ if id_list:
     for device_id in rawData['device_cli_outputs']:
         print(rawData['device_cli_outputs'][device_id])
         output = rawData['device_cli_outputs'][device_id][0]['output']
-        output_regex = re.compile('System\sPower\sStatus:\s+(\w+)')
+        output_regex = re.compile(r'System\sPower\sStatus:\s+(\w+)')
         power_status = output_regex.findall(output)[0]
         devicename = device_df.loc[int(device_id),'hostname']
         #print(devicename, power_status)
