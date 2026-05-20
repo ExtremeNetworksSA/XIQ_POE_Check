@@ -1,9 +1,11 @@
 # XIQ PoE Check
 ### XIQ_PoE_Check.py
 
-_The software is provided as-is and [Extreme Networks](http://www.extremenetworks.com/) has no obligation to provide maintenance, support, updates, enhancements, or modifications. Any support provided by [Extreme Networks](http://www.extremenetworks.com/) is at its sole discretion._
 
-_Issues and/or bug fixes may be reported on in the Issues for this repository._
+|  _The software is provided as-is and timjsmith24 has no obligation to provide maintenance, support, updates, enhancements, or modifications. Any support provided by timjsmith24 is at his sole discretion._  |
+|
+_Issues and/or bug fixes may be reported on in the Issues for this repository._  |
+
 
 ## Purpose
 This script will collect Power Status for each device of a particular building. Once collect the script will export a CSV listing the device names with their current power status.

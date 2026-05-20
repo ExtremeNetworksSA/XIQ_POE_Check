@@ -12,6 +12,8 @@ from app.xiq_api import XIQ
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 logger = logging.getLogger('PoE_Check.Main')
 
+# v1.2.1
+
 XIQ_API_token = ''
 
 pageSize = 100
@@ -145,8 +147,10 @@ logger.info(msg)
 # convert device_data dict to dataframe
 device_df = pd.DataFrame(device_data)
 device_df.set_index('id',inplace=True)
+filt = device_df['device_function'] == 'AP'
+device_df = device_df[filt]
 # get list of device ids for cli command call
-id_list = [sub['id'] for sub in device_data ]
+id_list = device_df.index.to_list()
 
 commands = ['show system power status']
 if id_list:
@@ -154,6 +158,9 @@ if id_list:
     rawData = x.sendCLI(id_list, commands)
     for device_id in rawData['device_cli_outputs']:
         print(rawData['device_cli_outputs'][device_id])
+        if rawData['device_cli_outputs'][device_id][0]['response_code'] == 'ERR_CLI_EXECUTED':
+            logger.error(f"Error executing CLI command on device {device_id}")
+            continue
         output = rawData['device_cli_outputs'][device_id][0]['output']
         output_regex = re.compile(r'System\sPower\sStatus:\s+(\w+)')
         power_status = output_regex.findall(output)[0]
